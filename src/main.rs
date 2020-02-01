@@ -1,9 +1,10 @@
-use clap::{crate_authors, crate_version, App, Arg, SubCommand};
+use clap::{crate_authors, crate_description, crate_name, crate_version, App, Arg, SubCommand};
 
 fn main() {
-    let matches = App::new("timetracker-rs")
+    let matches = App::new(crate_name!())
         .version(crate_version!())
         .author(crate_authors!())
+        .about(crate_description!())
         .subcommand(
             SubCommand::with_name("init")
                 .about("Initialize a new project")

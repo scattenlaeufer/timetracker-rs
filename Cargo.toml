@@ -1,6 +1,7 @@
 [package]
 name = "timetracker-rs"
 version = "0.1.0"
+description = "A small time tracker for projects written in Rust"
 authors = ["Björn Guth <scatty@bguth.de>"]
 edition = "2018"
 

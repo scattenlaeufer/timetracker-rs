@@ -1,4 +1,6 @@
 use clap::{crate_authors, crate_description, crate_name, crate_version, App, Arg, SubCommand};
+use std::path::Path;
+use timetracker;
 
 fn main() {
     let rate_option = Arg::with_name("rate")
@@ -74,5 +76,15 @@ fn main() {
                 .arg(&project_argument),
         )
         .get_matches();
-    println!("{:#?}", matches);
+
+    if let Some(matches) = matches.subcommand_matches("init") {
+        println!("{:#?}", matches);
+        let rate = matches
+            .value_of("rate")
+            .unwrap_or("0.0")
+            .parse::<f32>()
+            .unwrap();
+        let path = Path::new("time_sheet.json");
+        timetracker::initialize_project(matches.value_of("name").unwrap().to_string(), rate, &path);
+    }
 }

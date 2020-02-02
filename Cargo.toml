@@ -1,5 +1,5 @@
 [package]
-name = "timetracker-rs"
+name = "timetracker"
 version = "0.1.0"
 description = "A small time tracker for projects written in Rust"
 authors = ["Björn Guth <scatty@bguth.de>"]
@@ -9,3 +9,7 @@ edition = "2018"
 
 [dependencies]
 clap = "2.33.0"
+serde = {version = "1.0.104", features = ["derive"]}
+serde_json = "1.0.45"
+proptest = "0.9.5"
+chrono = { version = "0.4.10", features = ["serde"] }

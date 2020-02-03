@@ -80,6 +80,25 @@ impl TimeSheet {
     }
 }
 
+#[derive(Debug)]
+struct TimeSheetError {
+    message: String,
+}
+
+impl std::error::Error for TimeSheetError {}
+
+impl std::fmt::Display for TimeSheetError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", self.message)
+    }
+}
+
+impl TimeSheetError {
+    fn new(message: String) -> TimeSheetError {
+        TimeSheetError { message }
+    }
+}
+
 pub fn initialize_project(
     name: String,
     hourly_rate: f32,
@@ -94,10 +113,21 @@ pub fn initialize_project(
     Ok(())
 }
 
-pub fn start_working_session(description: Option<&str>) {
+pub fn start_working_session(description: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
     let start_time = Local::now();
     let mut desc = String::new();
     let path = Path::new("time_sheet.json");
+    let mut time_sheet = TimeSheet::load(&path)?;
+    if let Some(s) = time_sheet.work_sessions.last() {
+        match s.stop {
+            None => {
+                return Err(Box::new(TimeSheetError::new(String::from(
+                    "Last work session not finished!",
+                ))));
+            }
+            Some(_) => (),
+        }
+    };
     match description {
         Some(d) => {
             desc.push_str(d);
@@ -105,47 +135,40 @@ pub fn start_working_session(description: Option<&str>) {
         }
         None => println!("Start working at {:?}", start_time),
     };
-    let mut time_sheet = TimeSheet::load(&path).unwrap();
-    if let Some(s) = time_sheet.work_sessions.last() {
-        match s.stop {
-            None => {
-                println!("Last work session not finished!");
-                return ();
-            }
-            Some(_) => (),
-        }
-    };
     time_sheet
         .work_sessions
         .push(WorkSession::start_new_work_session(start_time, desc));
-    time_sheet.save(&path).unwrap();
+    time_sheet.save(&path)?;
     println!("{:#?}", time_sheet);
+    Ok(())
 }
 
-pub fn stop_working_session(description: Option<&str>) {
+pub fn stop_working_session(description: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
     let stop_time = Local::now();
     let mut desc = String::new();
     let path = Path::new("time_sheet.json");
+    let mut time_sheet = TimeSheet::load(&path).unwrap();
+    match time_sheet.work_sessions.last() {
+        Some(s) => match s.stop {
+            None => (),
+            Some(_) => {
+                return Err(Box::new(TimeSheetError::new(String::from(
+                    "No unfinished work session found to stop!",
+                ))));
+            }
+        },
+        None => {
+            return Err(Box::new(TimeSheetError::new(String::from(
+                "No unfinished work session found to stop!",
+            ))));
+        }
+    }
     match description {
         Some(d) => {
             desc.push_str(d);
             println!("Stop working on {} at {:?}", desc, stop_time);
         }
         None => println!("Stop working at {:?}", stop_time),
-    }
-    let mut time_sheet = TimeSheet::load(&path).unwrap();
-    match time_sheet.work_sessions.last() {
-        Some(s) => match s.stop {
-            None => (),
-            Some(_) => {
-                println!("There is no work session to stop!");
-                return ();
-            }
-        },
-        None => {
-            println!("There is no work session to stop!");
-            return ();
-        }
     }
     //time_sheet.work_sessions.last().unwrap().stop = Some(stop_time);
     let mut last_work_session = time_sheet.work_sessions.pop().unwrap();
@@ -154,6 +177,7 @@ pub fn stop_working_session(description: Option<&str>) {
     time_sheet.work_sessions.push(last_work_session);
     time_sheet.save(&path).unwrap();
     println!("{:#?}", time_sheet);
+    Ok(())
 }
 
 #[cfg(test)]

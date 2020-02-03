@@ -90,10 +90,10 @@ fn main() {
     }
 
     if let Some(matches) = matches.subcommand_matches("start") {
-        timetracker::start_working_session(matches.value_of("description"));
+        timetracker::start_working_session(matches.value_of("description")).unwrap();
     }
 
     if let Some(matches) = matches.subcommand_matches("stop") {
-        timetracker::stop_working_session(matches.value_of("description"));
+        timetracker::stop_working_session(matches.value_of("description")).unwrap();
     }
 }

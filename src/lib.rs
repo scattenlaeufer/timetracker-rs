@@ -8,8 +8,18 @@ use std::path::Path;
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 struct WorkSession {
     start: DateTime<Local>,
-    end: Option<DateTime<Local>>,
+    stop: Option<DateTime<Local>>,
     description: String,
+}
+
+impl WorkSession {
+    fn start_new_work_session(start: DateTime<Local>, description: String) -> WorkSession {
+        WorkSession {
+            start,
+            description,
+            stop: None,
+        }
+    }
 }
 
 /*
@@ -41,23 +51,109 @@ impl TimeSheet {
     fn from_json(json_string: String) -> serde_json::Result<TimeSheet> {
         serde_json::from_str(&json_string)
     }
+
+    fn load(path: &Path) -> Result<TimeSheet, Box<dyn std::error::Error>> {
+        let file = std::fs::File::open(&path)?;
+        let reader = BufReader::new(&file);
+        let mut lines = vec![];
+        for line in reader.lines() {
+            lines.push(line?);
+        }
+        let json_string = lines.join("\n");
+        match TimeSheet::from_json(json_string) {
+            Ok(t) => Ok(t),
+            Err(e) => Err(Box::new(e)),
+        }
+    }
 }
 
 impl TimeSheet {
     fn to_json(&self) -> serde_json::Result<String> {
         serde_json::to_string(&self)
     }
+
+    fn save(&self, path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+        let file = std::fs::File::create(&path)?;
+        let mut writer = BufWriter::new(&file);
+        write!(&mut writer, "{}", &self.to_json()?)?;
+        Ok(())
+    }
 }
 
-pub fn initialize_project(name: String, hourly_rate: f32, path: &Path) {
+pub fn initialize_project(
+    name: String,
+    hourly_rate: f32,
+    path: &Path,
+) -> Result<(), Box<dyn std::error::Error>> {
     println!(
         "Initializing Project {} with an hourly rate of {}€",
         name, hourly_rate
     );
     let time_sheet = TimeSheet::new(name, hourly_rate);
-    let time_sheet_file = std::fs::File::create(&path).unwrap();
-    let mut writer = BufWriter::new(&time_sheet_file);
-    write!(&mut writer, "{}", time_sheet.to_json().unwrap());
+    time_sheet.save(path)?;
+    Ok(())
+}
+
+pub fn start_working_session(description: Option<&str>) {
+    let start_time = Local::now();
+    let mut desc = String::new();
+    let path = Path::new("time_sheet.json");
+    match description {
+        Some(d) => {
+            desc.push_str(d);
+            println!("Start working on {} at {:?}", desc, start_time);
+        }
+        None => println!("Start working at {:?}", start_time),
+    };
+    let mut time_sheet = TimeSheet::load(&path).unwrap();
+    if let Some(s) = time_sheet.work_sessions.last() {
+        match s.stop {
+            None => {
+                println!("Last work session not finished!");
+                return ();
+            }
+            Some(_) => (),
+        }
+    };
+    time_sheet
+        .work_sessions
+        .push(WorkSession::start_new_work_session(start_time, desc));
+    time_sheet.save(&path).unwrap();
+    println!("{:#?}", time_sheet);
+}
+
+pub fn stop_working_session(description: Option<&str>) {
+    let stop_time = Local::now();
+    let mut desc = String::new();
+    let path = Path::new("time_sheet.json");
+    match description {
+        Some(d) => {
+            desc.push_str(d);
+            println!("Stop working on {} at {:?}", desc, stop_time);
+        }
+        None => println!("Stop working at {:?}", stop_time),
+    }
+    let mut time_sheet = TimeSheet::load(&path).unwrap();
+    match time_sheet.work_sessions.last() {
+        Some(s) => match s.stop {
+            None => (),
+            Some(_) => {
+                println!("There is no work session to stop!");
+                return ();
+            }
+        },
+        None => {
+            println!("There is no work session to stop!");
+            return ();
+        }
+    }
+    //time_sheet.work_sessions.last().unwrap().stop = Some(stop_time);
+    let mut last_work_session = time_sheet.work_sessions.pop().unwrap();
+    last_work_session.stop = Some(stop_time);
+    last_work_session.description = desc;
+    time_sheet.work_sessions.push(last_work_session);
+    time_sheet.save(&path).unwrap();
+    println!("{:#?}", time_sheet);
 }
 
 #[cfg(test)]

@@ -85,6 +85,15 @@ fn main() {
             .parse::<f32>()
             .unwrap();
         let path = Path::new("time_sheet.json");
-        timetracker::initialize_project(matches.value_of("name").unwrap().to_string(), rate, &path);
+        timetracker::initialize_project(matches.value_of("name").unwrap().to_string(), rate, &path)
+            .unwrap();
+    }
+
+    if let Some(matches) = matches.subcommand_matches("start") {
+        timetracker::start_working_session(matches.value_of("description"));
+    }
+
+    if let Some(matches) = matches.subcommand_matches("stop") {
+        timetracker::stop_working_session(matches.value_of("description"));
     }
 }

@@ -79,11 +79,10 @@ fn main() {
 
     if let Some(matches) = matches.subcommand_matches("init") {
         println!("{:#?}", matches);
-        let rate = matches
-            .value_of("rate")
-            .unwrap_or("0.0")
-            .parse::<f32>()
-            .unwrap();
+        let rate = match matches.value_of("rate") {
+            Some(r) => Some(r.parse::<f32>().unwrap()),
+            None => None,
+        };
         let path = Path::new("time_sheet.json");
         timetracker::initialize_project(matches.value_of("name").unwrap().to_string(), rate, &path)
             .unwrap();
@@ -95,5 +94,9 @@ fn main() {
 
     if let Some(matches) = matches.subcommand_matches("stop") {
         timetracker::stop_working_session(matches.value_of("description")).unwrap();
+    }
+
+    if let Some(matches) = matches.subcommand_matches("analyze") {
+        timetracker::analyze_work_sheet(matches.value_of("project")).unwrap();
     }
 }

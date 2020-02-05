@@ -202,7 +202,9 @@ pub fn stop_working_session(description: Option<&str>) -> Result<(), Box<dyn std
     //time_sheet.work_sessions.last().unwrap().stop = Some(stop_time);
     let mut last_work_session = time_sheet.work_sessions.pop().unwrap();
     last_work_session.stop = Some(stop_time);
-    last_work_session.description = desc;
+    if description.is_some() {
+        last_work_session.description = desc;
+    }
     time_sheet.work_sessions.push(last_work_session);
     time_sheet.save(&path).unwrap();
     Ok(())

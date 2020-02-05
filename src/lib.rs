@@ -5,6 +5,7 @@ use serde_json;
 use std::io::prelude::*;
 use std::io::{BufReader, BufWriter};
 use std::path::Path;
+use unicode_segmentation::UnicodeSegmentation;
 
 const DATETIME_FORMAT: &str = "%Y-%m-%d %H:%M";
 
@@ -100,6 +101,23 @@ impl TimeSheetError {
     fn new(message: String) -> TimeSheetError {
         TimeSheetError { message }
     }
+}
+
+fn split_description_string(desc_string: &str, max_line_length: usize) -> String {
+    let desc_split = desc_string.split(' ');
+    let mut lines_vec = vec![];
+    let mut line_vec = vec![];
+    for word in desc_split {
+        if line_vec.join(" ").graphemes(true).count() + word.graphemes(true).count()
+            > max_line_length
+        {
+            lines_vec.push(line_vec.join(" "));
+            line_vec.clear();
+        }
+        line_vec.push(word);
+    }
+    lines_vec.push(line_vec.join(" "));
+    lines_vec.join("\n")
 }
 
 pub fn initialize_project(
@@ -214,7 +232,7 @@ pub fn analyze_work_sheet(_project: Option<&str>) -> Result<(), Box<dyn std::err
     }
 
     for work_session in time_sheet.work_sessions {
-        //println!("{:?}", work_session);
+        let split_description = split_description_string(&work_session.description, 45);
         let stop_time = match work_session.stop {
             Some(s) => s,
             None => Local::now(),
@@ -229,7 +247,7 @@ pub fn analyze_work_sheet(_project: Option<&str>) -> Result<(), Box<dyn std::err
                     stop_time.format(DATETIME_FORMAT),
                     r->format!("{:.02}", duration),
                     r->format!("{:.02}", session_cost),
-                    work_session.description
+                    split_description
                 ]);
                 project_cost += session_cost;
             }
@@ -238,7 +256,7 @@ pub fn analyze_work_sheet(_project: Option<&str>) -> Result<(), Box<dyn std::err
                     work_session.start.format(DATETIME_FORMAT),
                     stop_time.format(DATETIME_FORMAT),
                     r->format!("{:.02}h", duration),
-                    work_session.description
+                    split_description
                 ]);
             }
         };

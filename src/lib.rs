@@ -7,7 +7,7 @@ use std::io::{BufReader, BufWriter};
 use std::path::Path;
 use unicode_segmentation::UnicodeSegmentation;
 
-const DATETIME_FORMAT: &str = "%Y-%m-%d %H:%M";
+pub const DATETIME_FORMAT: &str = "%Y-%m-%d %H:%M";
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 struct WorkSession {

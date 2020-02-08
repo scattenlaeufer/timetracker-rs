@@ -291,11 +291,6 @@ mod tests {
     use super::*;
     use proptest::prelude::*;
 
-    #[test]
-    fn dummy_test() {
-        assert!(true);
-    }
-
     /*
     prop_compose! {
         fn compose_work_sessions(max_length: usize)(work_sessions in any_with::<Vec<WorkSession>>(proptest::collection::size_range(max_length).lift())) -> Vec<WorkSession> {

@@ -28,10 +28,10 @@ fn main() {
     fn time_validator(s: String) -> Result<(), String> {
         match chrono::DateTime::parse_from_str(&s, timetracker::DATETIME_FORMAT) {
             Ok(_) => Ok(()),
-            Err(_) => Err(String::from(format!(
+            Err(_) => Err(format!(
                 "Must comply with \"{}\" format!",
                 timetracker::DATETIME_FORMAT
-            ))),
+            )),
         }
     }
 

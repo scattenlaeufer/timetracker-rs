@@ -229,12 +229,19 @@ pub fn analyze_work_sheet(_project: Option<&str>) -> Result<(), Box<dyn std::err
     table.set_format(*format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
 
     match time_sheet.hourly_rate {
-        Some(_) => table.set_titles(row!["Start", "Stop", "Time [h]", "Cost [€]", "Description"]),
-        None => table.set_titles(row!["Start", "Stop", "Time [h]", "Description"]),
+        Some(_) => table.set_titles(row![
+            "ID",
+            "Start",
+            "Stop",
+            "Time [h]",
+            "Cost [€]",
+            "Description"
+        ]),
+        None => table.set_titles(row!["ID", "Start", "Stop", "Time [h]", "Description"]),
     }
 
-    for work_session in time_sheet.work_sessions {
-        let split_description = split_description_string(&work_session.description, 45);
+    for (i, work_session) in time_sheet.work_sessions.iter().enumerate() {
+        let split_description = split_description_string(&work_session.description, 44);
         let stop_time = match work_session.stop {
             Some(s) => s,
             None => Local::now(),
@@ -245,6 +252,7 @@ pub fn analyze_work_sheet(_project: Option<&str>) -> Result<(), Box<dyn std::err
             Some(r) => {
                 let session_cost = duration * r;
                 table.add_row(row![
+                    r->i,
                     work_session.start.format(DATETIME_FORMAT),
                     stop_time.format(DATETIME_FORMAT),
                     r->format!("{:.02}", duration),
@@ -255,6 +263,7 @@ pub fn analyze_work_sheet(_project: Option<&str>) -> Result<(), Box<dyn std::err
             }
             None => {
                 table.add_row(row![
+                    r->i,
                     work_session.start.format(DATETIME_FORMAT),
                     stop_time.format(DATETIME_FORMAT),
                     r->format!("{:.02}h", duration),

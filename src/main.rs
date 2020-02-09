@@ -1,3 +1,5 @@
+// use chrono::prelude::*;
+use chrono::prelude::*;
 use clap::{crate_authors, crate_description, crate_name, crate_version, App, Arg, SubCommand};
 use std::path::Path;
 use timetracker;
@@ -26,7 +28,7 @@ fn main() {
         .help("Project to stop work on");
 
     fn time_validator(s: String) -> Result<(), String> {
-        match chrono::DateTime::parse_from_str(&s, timetracker::DATETIME_FORMAT) {
+        match Local.datetime_from_str(&s, timetracker::DATETIME_FORMAT) {
             Ok(_) => Ok(()),
             Err(_) => Err(format!(
                 "Must comply with \"{}\" format!",
@@ -136,7 +138,7 @@ fn main() {
                 .author(crate_authors!())
                 .version(crate_version!())
                 .arg(start_option.clone().required(true))
-                .arg(stop_option.clone().required(true))
+                .arg(&stop_option)
                 .arg(&description_option)
                 .arg(&project_argument),
         )
@@ -184,8 +186,14 @@ fn main() {
         println!("Subcommand config is not implemented yet.")
     }
 
-    if let Some(_matches) = matches.subcommand_matches("add") {
-        println!("Subcommand add is not implemented yet.")
+    if let Some(matches) = matches.subcommand_matches("add") {
+        timetracker::add_work_session_to_time_sheet(
+            matches.value_of("project"),
+            matches.value_of("start").unwrap(),
+            matches.value_of("stop"),
+            matches.value_of("description"),
+        )
+        .unwrap();
     }
 
     if let Some(_matches) = matches.subcommand_matches("edit") {

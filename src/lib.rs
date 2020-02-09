@@ -2,6 +2,7 @@ use chrono::prelude::*;
 use prettytable::{cell, format, row, Table};
 use serde::{Deserialize, Serialize};
 use serde_json;
+use std::cmp::Ordering;
 use std::io::prelude::*;
 use std::io::{BufReader, BufWriter};
 use std::path::Path;
@@ -9,14 +10,46 @@ use unicode_segmentation::UnicodeSegmentation;
 
 pub const DATETIME_FORMAT: &str = "%Y-%m-%d %H:%M";
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, Debug)]
 struct WorkSession {
     start: DateTime<Local>,
     stop: Option<DateTime<Local>>,
     description: String,
 }
 
+impl PartialEq for WorkSession {
+    fn eq(&self, other: &Self) -> bool {
+        self.start == other.start
+            && self.stop == other.stop
+            && self.description == other.description
+    }
+}
+
+impl Ord for WorkSession {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.start.cmp(&other.start)
+    }
+}
+
+impl PartialOrd for WorkSession {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(&other))
+    }
+}
+
 impl WorkSession {
+    fn new(
+        start: DateTime<Local>,
+        stop: Option<DateTime<Local>>,
+        description: String,
+    ) -> WorkSession {
+        WorkSession {
+            start,
+            stop,
+            description,
+        }
+    }
+
     fn start_new_work_session(start: DateTime<Local>, description: String) -> WorkSession {
         WorkSession {
             start,
@@ -283,6 +316,32 @@ pub fn analyze_work_sheet(_project: Option<&str>) -> Result<(), Box<dyn std::err
         total_table.add_row(row!["Total project cost", r->format!("{:.02}€", project_cost)]);
     }
     total_table.printstd();
+    Ok(())
+}
+
+pub fn add_work_session_to_time_sheet(
+    _project: Option<&str>,
+    start: &str,
+    stop: Option<&str>,
+    description: Option<&str>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let work_session = WorkSession::new(
+        Local.datetime_from_str(start, DATETIME_FORMAT)?,
+        match stop {
+            Some(s) => Some(Local.datetime_from_str(s, DATETIME_FORMAT)?),
+            None => None,
+        },
+        match description {
+            Some(d) => String::from(d),
+            None => String::from(""),
+        },
+    );
+
+    let time_sheet_path = Path::new("time_sheet.json");
+    let mut time_sheet = TimeSheet::load(&time_sheet_path)?;
+    time_sheet.work_sessions.push(work_session);
+    time_sheet.work_sessions.sort();
+    time_sheet.save(&time_sheet_path)?;
     Ok(())
 }
 

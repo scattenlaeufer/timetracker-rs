@@ -174,11 +174,11 @@ fn main() {
     }
 
     if let Some(matches) = matches.subcommand_matches("start") {
-        timetracker::start_working_session(matches.value_of("description")).unwrap();
+        timetracker::start_working_session(matches.value_of("description"), None).unwrap();
     }
 
     if let Some(matches) = matches.subcommand_matches("stop") {
-        timetracker::stop_working_session(matches.value_of("description")).unwrap();
+        timetracker::stop_working_session(matches.value_of("description"), None).unwrap();
     }
 
     if let Some(matches) = matches.subcommand_matches("analyze") {
@@ -194,7 +194,8 @@ fn main() {
     }
 
     if let Some(subcommand_matches) = matches.subcommand_matches("switch") {
-        timetracker::switch_working_sessions(subcommand_matches.value_of("description")).unwrap();
+        timetracker::switch_working_sessions(subcommand_matches.value_of("description"), None)
+            .unwrap();
     }
 
     if let Some(matches) = matches.subcommand_matches("add") {
@@ -202,6 +203,7 @@ fn main() {
             matches.value_of("project"),
             matches.value_of("start").unwrap(),
             matches.value_of("stop"),
+            None,
             matches.value_of("description"),
         )
         .unwrap();

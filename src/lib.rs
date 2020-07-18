@@ -14,6 +14,8 @@ struct WorkSession {
     start: DateTime<Local>,
     stop: Option<DateTime<Local>>,
     description: String,
+    #[serde(default = "default_session_type")]
+    session_type: String,
 }
 
 impl PartialEq for WorkSession {
@@ -41,19 +43,26 @@ impl WorkSession {
         start: DateTime<Local>,
         stop: Option<DateTime<Local>>,
         description: String,
+        session_type: Option<String>,
     ) -> WorkSession {
         WorkSession {
             start,
             stop,
             description,
+            session_type: session_type.unwrap_or_else(default_session_type),
         }
     }
 
-    fn start_new_work_session(start: DateTime<Local>, description: String) -> WorkSession {
+    fn start_new_work_session(
+        start: DateTime<Local>,
+        description: String,
+        session_type: Option<String>,
+    ) -> WorkSession {
         WorkSession {
             start,
             description,
             stop: None,
+            session_type: session_type.unwrap_or_else(default_session_type),
         }
     }
 }
@@ -171,6 +180,13 @@ fn split_description_string(desc_string: &str, max_line_length: usize) -> String
     lines_vec.join("\n")
 }
 
+fn get_session_type(time_sheet: &TimeSheet, session_type: Option<&str>) -> String {
+    match session_type {
+        Some(s) => s.to_string(),
+        None => time_sheet.session_type_default.clone(),
+    }
+}
+
 pub fn initialize_project(
     name: String,
     hourly_rate: Option<f32>,
@@ -186,7 +202,10 @@ pub fn initialize_project(
     Ok(())
 }
 
-pub fn start_working_session(description: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
+pub fn start_working_session(
+    description: Option<&str>,
+    session_type: Option<&str>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let start_time = Local::now();
     let mut desc = String::new();
     let path = Path::new("time_sheet.json");
@@ -212,14 +231,22 @@ pub fn start_working_session(description: Option<&str>) -> Result<(), Box<dyn st
         }
         None => println!("Start working at {}", start_time.format(DATETIME_FORMAT)),
     };
+    let session_type = get_session_type(&time_sheet, session_type);
     time_sheet
         .work_sessions
-        .push(WorkSession::start_new_work_session(start_time, desc));
+        .push(WorkSession::start_new_work_session(
+            start_time,
+            desc,
+            Some(session_type),
+        ));
     time_sheet.save(&path)?;
     Ok(())
 }
 
-pub fn stop_working_session(description: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
+pub fn stop_working_session(
+    description: Option<&str>,
+    session_type: Option<&str>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let stop_time = Local::now();
     let mut desc = String::new();
     let path = Path::new("time_sheet.json");
@@ -252,6 +279,9 @@ pub fn stop_working_session(description: Option<&str>) -> Result<(), Box<dyn std
     }
     //time_sheet.work_sessions.last().unwrap().stop = Some(stop_time);
     let mut last_work_session = time_sheet.work_sessions.pop().unwrap();
+    if session_type.is_some() {
+        last_work_session.session_type = get_session_type(&time_sheet, session_type);
+    }
     last_work_session.stop = Some(stop_time);
     if description.is_some() {
         last_work_session.description = desc;
@@ -264,9 +294,10 @@ pub fn stop_working_session(description: Option<&str>) -> Result<(), Box<dyn std
 /// Switch from one working session to the next.
 pub fn switch_working_sessions(
     description: Option<&str>,
+    session_type: Option<&str>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    stop_working_session(description)?;
-    start_working_session(None)
+    stop_working_session(description, None)?;
+    start_working_session(None, session_type)
 }
 
 pub fn analyze_work_sheet(_project: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
@@ -349,8 +380,11 @@ pub fn add_work_session_to_time_sheet(
     _project: Option<&str>,
     start: &str,
     stop: Option<&str>,
+    session_type: Option<&str>,
     description: Option<&str>,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let time_sheet_path = Path::new("time_sheet.json");
+    let mut time_sheet = TimeSheet::load(&time_sheet_path)?;
     let work_session = WorkSession::new(
         Local.datetime_from_str(start, DATETIME_FORMAT)?,
         match stop {
@@ -361,10 +395,9 @@ pub fn add_work_session_to_time_sheet(
             Some(d) => String::from(d),
             None => String::from(""),
         },
+        Some(get_session_type(&time_sheet, session_type)),
     );
 
-    let time_sheet_path = Path::new("time_sheet.json");
-    let mut time_sheet = TimeSheet::load(&time_sheet_path)?;
     time_sheet.work_sessions.push(work_session);
     time_sheet.work_sessions.sort();
     time_sheet.save(&time_sheet_path)?;
@@ -387,7 +420,7 @@ mod tests {
     proptest! {
         #[test]
         fn test_time_sheet_creation(project_name in "\\PC*", hourly_rate: f32) {
-            let time_sheet = TimeSheet::new(project_name.clone(), Some(hourly_rate));
+            let time_sheet = TimeSheet::new(project_name.clone(), Some(hourly_rate), None, None);
             prop_assert_eq!(time_sheet.project_name, project_name);
             prop_assert_eq!(time_sheet.hourly_rate, Some(hourly_rate));
             assert_eq!(time_sheet.work_sessions.len(), 0);

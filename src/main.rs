@@ -2,7 +2,6 @@
 use chrono::prelude::*;
 use clap::{crate_authors, crate_description, crate_name, crate_version, App, Arg, SubCommand};
 use std::path::Path;
-use timetracker;
 
 fn main() {
     let rate_option = Arg::with_name("rate")
@@ -153,6 +152,14 @@ fn main() {
                 .arg(&description_option)
                 .arg(&project_argument),
         )
+        .subcommand(
+            SubCommand::with_name("switch")
+                .about("Switch from one work session to the next")
+                .author(crate_authors!())
+                .version(crate_version!())
+                .arg(&project_option)
+                .arg(&description_argument),
+        )
         .get_matches();
 
     if let Some(matches) = matches.subcommand_matches("init") {
@@ -184,6 +191,10 @@ fn main() {
 
     if let Some(_matches) = matches.subcommand_matches("config") {
         println!("Subcommand config is not implemented yet.")
+    }
+
+    if let Some(subcommand_matches) = matches.subcommand_matches("switch") {
+        timetracker::switch_working_sessions(subcommand_matches.value_of("description")).unwrap();
     }
 
     if let Some(matches) = matches.subcommand_matches("add") {

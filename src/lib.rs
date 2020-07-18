@@ -1,7 +1,6 @@
 use chrono::prelude::*;
 use prettytable::{cell, format, row, Table};
 use serde::{Deserialize, Serialize};
-use serde_json;
 use std::cmp::Ordering;
 use std::io::prelude::*;
 use std::io::{BufReader, BufWriter};
@@ -241,6 +240,14 @@ pub fn stop_working_session(description: Option<&str>) -> Result<(), Box<dyn std
     time_sheet.work_sessions.push(last_work_session);
     time_sheet.save(&path).unwrap();
     Ok(())
+}
+
+/// Switch from one working session to the next.
+pub fn switch_working_sessions(
+    description: Option<&str>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    stop_working_session(description)?;
+    start_working_session(None)
 }
 
 pub fn analyze_work_sheet(_project: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {

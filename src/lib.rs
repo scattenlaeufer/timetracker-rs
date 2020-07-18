@@ -72,14 +72,33 @@ impl proptest::arbitrary::Arbitrary for WorkSession {
 struct TimeSheet {
     project_name: String,
     hourly_rate: Option<f32>,
+    #[serde(default = "default_session_types_vec")]
+    session_types: Vec<String>,
+    #[serde(default = "default_session_type")]
+    session_type_default: String,
     work_sessions: Vec<WorkSession>,
 }
 
+fn default_session_type() -> String {
+    "default".to_string()
+}
+
+fn default_session_types_vec() -> Vec<String> {
+    vec![default_session_type()]
+}
+
 impl TimeSheet {
-    fn new(project_name: String, hourly_rate: Option<f32>) -> TimeSheet {
+    fn new(
+        project_name: String,
+        hourly_rate: Option<f32>,
+        session_types: Option<Vec<String>>,
+        session_type_default: Option<String>,
+    ) -> TimeSheet {
         TimeSheet {
             project_name,
             hourly_rate,
+            session_types: session_types.unwrap_or_else(default_session_types_vec),
+            session_type_default: session_type_default.unwrap_or_else(default_session_type),
             work_sessions: Vec::new(),
         }
     }
@@ -162,7 +181,7 @@ pub fn initialize_project(
         name,
         hourly_rate.unwrap_or(0f32)
     );
-    let time_sheet = TimeSheet::new(name, hourly_rate);
+    let time_sheet = TimeSheet::new(name, hourly_rate, None, None);
     time_sheet.save(path)?;
     Ok(())
 }

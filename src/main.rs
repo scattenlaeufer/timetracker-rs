@@ -179,7 +179,7 @@ fn main() {
     }
 
     if let Some(_matches) = matches.subcommand_matches("list") {
-        println!("Subcommand list is not implemented yet.")
+        timetracker::test_path_options().unwrap();
     }
 
     if let Some(_matches) = matches.subcommand_matches("config") {

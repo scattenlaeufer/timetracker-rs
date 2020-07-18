@@ -3,6 +3,8 @@ use prettytable::{cell, format, row, Table};
 use serde::{Deserialize, Serialize};
 use serde_json;
 use std::cmp::Ordering;
+use std::ffi::OsStr;
+use std::fs::read_dir;
 use std::io::prelude::*;
 use std::io::{BufReader, BufWriter};
 use std::path::Path;
@@ -342,6 +344,31 @@ pub fn add_work_session_to_time_sheet(
     time_sheet.work_sessions.push(work_session);
     time_sheet.work_sessions.sort();
     time_sheet.save(&time_sheet_path)?;
+    Ok(())
+}
+
+fn find_file(file_name: &OsStr, path: &Path) -> Result<Option<String>, Box<dyn std::error::Error>> {
+    let path_iterator = read_dir(&path)?;
+    let mut file_result = None;
+    for p in path_iterator {
+        let file_path = p?.path();
+        if file_path.file_name().unwrap_or(&OsStr::new("")) == file_name {
+            file_result = Some(
+                file_path
+                    .as_path()
+                    .as_os_str()
+                    .to_str()
+                    .unwrap()
+                    .to_string(),
+            );
+        }
+    }
+    Ok(file_result)
+}
+
+pub fn test_path_options() -> Result<(), Box<dyn std::error::Error>> {
+    let path = Path::new(".");
+    println!("{:?}", find_file(OsStr::new("time_sheet.json"), &path));
     Ok(())
 }
 

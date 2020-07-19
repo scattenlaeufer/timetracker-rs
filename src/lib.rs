@@ -2,6 +2,7 @@ use chrono::prelude::*;
 use prettytable::{cell, format, row, Table};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
+use std::collections::HashMap;
 use std::io::prelude::*;
 use std::io::{BufReader, BufWriter};
 use std::path::Path;
@@ -305,6 +306,7 @@ pub fn analyze_work_sheet(_project: Option<&str>) -> Result<(), Box<dyn std::err
     let time_sheet = TimeSheet::load(&path)?;
     let mut work_time: f32 = 0.;
     let mut project_cost: f32 = 0.;
+    let mut session_type_map = HashMap::new();
 
     let mut project_table = Table::new();
     project_table.add_row(row!["Project", time_sheet.project_name]);
@@ -338,6 +340,10 @@ pub fn analyze_work_sheet(_project: Option<&str>) -> Result<(), Box<dyn std::err
         };
         let duration = (stop_time - work_session.start).num_minutes() as f32 / 60f32;
         work_time += duration;
+        let session_type_entry = session_type_map
+            .entry(&work_session.session_type)
+            .or_insert(0.);
+        *session_type_entry += duration;
         match time_sheet.hourly_rate {
             Some(r) => {
                 let session_cost = duration * r;
@@ -364,6 +370,27 @@ pub fn analyze_work_sheet(_project: Option<&str>) -> Result<(), Box<dyn std::err
     }
 
     table.printstd();
+
+    println!();
+
+    let mut session_type_table = Table::new();
+    session_type_table.set_format(*format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
+    match time_sheet.hourly_rate {
+        Some(rate) => {
+            session_type_table.set_titles(row!["Session type", "Time [h]", r->"%", "Cost [€]"]);
+            for (st, h) in session_type_map.iter() {
+                session_type_table.add_row(row![st, r->format!("{:.02}", h), r->format!("{:.01}" ,(h / work_time)*100_f32), r->format!("{:.02}", h * rate)]);
+            }
+        }
+        None => {
+            session_type_table.set_titles(row!["Session type", "Time [h]", r->"%"]);
+            for (st, h) in session_type_map.iter() {
+                session_type_table.add_row(row![st, r->format!("{:.02}", h), r->format!("{:.01}" ,(h / work_time)*100_f32)]);
+            }
+        }
+    }
+
+    session_type_table.printstd();
 
     println!();
 

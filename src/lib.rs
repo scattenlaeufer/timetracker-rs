@@ -15,8 +15,8 @@ struct WorkSession {
     start: DateTime<Local>,
     stop: Option<DateTime<Local>>,
     description: String,
-    #[serde(default = "default_session_type")]
-    session_type: String,
+    #[serde(default = "default_activity_type")]
+    activity: ActivityType,
 }
 
 impl PartialEq for WorkSession {
@@ -44,26 +44,26 @@ impl WorkSession {
         start: DateTime<Local>,
         stop: Option<DateTime<Local>>,
         description: String,
-        session_type: Option<String>,
+        activity: Option<ActivityType>,
     ) -> WorkSession {
         WorkSession {
             start,
             stop,
             description,
-            session_type: session_type.unwrap_or_else(default_session_type),
+            activity: activity.unwrap_or_else(default_activity_type),
         }
     }
 
     fn start_new_work_session(
         start: DateTime<Local>,
         description: String,
-        session_type: Option<String>,
+        activity: Option<ActivityType>,
     ) -> WorkSession {
         WorkSession {
             start,
             description,
             stop: None,
-            session_type: session_type.unwrap_or_else(default_session_type),
+            activity: activity.unwrap_or_else(default_activity_type),
         }
     }
 }
@@ -78,37 +78,98 @@ impl proptest::arbitrary::Arbitrary for WorkSession {
 }
 */
 
+#[derive(Serialize, Deserialize, Eq, Debug, Clone)]
+enum ActivityType {
+    SessionType(SessionType),
+    OpenprojectActivity,
+}
+
+impl PartialEq for ActivityType {
+    fn eq(&self, other: &Self) -> bool {
+        match self {
+            ActivityType::SessionType(s) => match other {
+                ActivityType::SessionType(o) => s.short == o.short && s.verbose == o.verbose,
+                ActivityType::OpenprojectActivity => false,
+            },
+            ActivityType::OpenprojectActivity => match other {
+                ActivityType::SessionType(_) => false,
+                ActivityType::OpenprojectActivity => true,
+            },
+        }
+    }
+}
+
+impl ActivityType {
+    fn get_short(&self) -> String {
+        match self {
+            ActivityType::SessionType(s) => s.short.clone(),
+            ActivityType::OpenprojectActivity => "openproject".to_string(),
+        }
+    }
+
+    fn get_verbose(&self) -> String {
+        match self {
+            ActivityType::SessionType(s) => s.verbose.clone(),
+            ActivityType::OpenprojectActivity => "Openproject".to_string(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Eq, Debug, Clone)]
+struct SessionType {
+    short: String,
+    verbose: String,
+}
+
+impl PartialEq for SessionType {
+    fn eq(&self, other: &Self) -> bool {
+        self.short == other.short && self.verbose == other.verbose
+    }
+}
+
+impl SessionType {
+    fn new(short: String, verbose: String) -> SessionType {
+        SessionType { short, verbose }
+    }
+}
+
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 struct TimeSheet {
     project_name: String,
     hourly_rate: Option<f32>,
-    #[serde(default = "default_session_types_vec")]
-    session_types: Vec<String>,
-    #[serde(default = "default_session_type")]
-    session_type_default: String,
+    #[serde(default = "default_activity_types_map")]
+    session_types: HashMap<String, ActivityType>,
+    #[serde(default = "default_activity_type")]
+    session_type_default: ActivityType,
     work_sessions: Vec<WorkSession>,
 }
 
-fn default_session_type() -> String {
-    "default".to_string()
+fn default_activity_type() -> ActivityType {
+    ActivityType::SessionType(SessionType::new(
+        "default".to_string(),
+        "Default".to_string(),
+    ))
 }
 
-fn default_session_types_vec() -> Vec<String> {
-    vec![default_session_type()]
+fn default_activity_types_map() -> HashMap<String, ActivityType> {
+    let mut activity_types_map = HashMap::new();
+    let default_activity = default_activity_type();
+    activity_types_map.insert(default_activity.get_short(), default_activity);
+    activity_types_map
 }
 
 impl TimeSheet {
     fn new(
         project_name: String,
         hourly_rate: Option<f32>,
-        session_types: Option<Vec<String>>,
-        session_type_default: Option<String>,
+        session_types: Option<HashMap<String, ActivityType>>,
+        session_type_default: Option<ActivityType>,
     ) -> TimeSheet {
         TimeSheet {
             project_name,
             hourly_rate,
-            session_types: session_types.unwrap_or_else(default_session_types_vec),
-            session_type_default: session_type_default.unwrap_or_else(default_session_type),
+            session_types: session_types.unwrap_or_else(default_activity_types_map),
+            session_type_default: session_type_default.unwrap_or_else(default_activity_type),
             work_sessions: Vec::new(),
         }
     }
@@ -181,9 +242,12 @@ fn split_description_string(desc_string: &str, max_line_length: usize) -> String
     lines_vec.join("\n")
 }
 
-fn get_session_type(time_sheet: &TimeSheet, session_type: Option<&str>) -> String {
+fn get_session_type(time_sheet: &TimeSheet, session_type: Option<&str>) -> ActivityType {
     match session_type {
-        Some(s) => s.to_string(),
+        Some(a) => match time_sheet.session_types.get(a) {
+            Some(s) => s.clone(),
+            None => panic!(format!("The activity {} was not recognized!", a)),
+        },
         None => time_sheet.session_type_default.clone(),
     }
 }
@@ -281,7 +345,7 @@ pub fn stop_working_session(
     //time_sheet.work_sessions.last().unwrap().stop = Some(stop_time);
     let mut last_work_session = time_sheet.work_sessions.pop().unwrap();
     if session_type.is_some() {
-        last_work_session.session_type = get_session_type(&time_sheet, session_type);
+        last_work_session.activity = get_session_type(&time_sheet, session_type);
     }
     last_work_session.stop = Some(stop_time);
     if description.is_some() {
@@ -341,7 +405,7 @@ pub fn analyze_work_sheet(_project: Option<&str>) -> Result<(), Box<dyn std::err
         let duration = (stop_time - work_session.start).num_minutes() as f32 / 60f32;
         work_time += duration;
         let session_type_entry = session_type_map
-            .entry(&work_session.session_type)
+            .entry(work_session.activity.get_short())
             .or_insert(0.);
         *session_type_entry += duration;
         match time_sheet.hourly_rate {
@@ -379,13 +443,22 @@ pub fn analyze_work_sheet(_project: Option<&str>) -> Result<(), Box<dyn std::err
         Some(rate) => {
             session_type_table.set_titles(row!["Session type", "Time [h]", r->"%", "Cost [€]"]);
             for (st, h) in session_type_map.iter() {
-                session_type_table.add_row(row![st, r->format!("{:.02}", h), r->format!("{:.01}" ,(h / work_time)*100_f32), r->format!("{:.02}", h * rate)]);
+                session_type_table.add_row(row![
+                    time_sheet.session_types.get(&**st).unwrap().get_verbose(),
+                    r->format!("{:.02}", h),
+                    r->format!("{:.01}", (h / work_time)*100_f32),
+                    r->format!("{:.02}", h * rate)
+                ]);
             }
         }
         None => {
             session_type_table.set_titles(row!["Session type", "Time [h]", r->"%"]);
             for (st, h) in session_type_map.iter() {
-                session_type_table.add_row(row![st, r->format!("{:.02}", h), r->format!("{:.01}" ,(h / work_time)*100_f32)]);
+                session_type_table.add_row(row![
+                    time_sheet.session_types.get(&**st).unwrap().get_verbose(),
+                    r->format!("{:.02}", h),
+                    r->format!("{:.01}" ,(h / work_time)*100_f32)
+                ]);
             }
         }
     }

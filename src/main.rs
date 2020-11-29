@@ -168,6 +168,72 @@ fn main() {
                 .arg(&project_option)
                 .arg(&description_argument),
         )
+        .subcommand(
+            SubCommand::with_name("activities")
+                .about("Manage separate activities with a project")
+                .author(crate_authors!())
+                .version(crate_version!())
+                .subcommand(
+                    SubCommand::with_name("add")
+                        .about("Add a new activity")
+                        .author(crate_authors!())
+                        .version(crate_version!()),
+                )
+                .subcommand(
+                    SubCommand::with_name("remove")
+                        .about("Remove a given activity")
+                        .author(crate_authors!())
+                        .version(crate_version!()),
+                )
+                .subcommand(
+                    SubCommand::with_name("edit")
+                        .about("Edit a given activity")
+                        .author(crate_authors!())
+                        .version(crate_version!()),
+                )
+                .subcommand(
+                    SubCommand::with_name("list")
+                        .about("List all activities")
+                        .author(crate_authors!())
+                        .version(crate_version!()),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("subprojects")
+                .about("Manage subprojects within project")
+                .author(crate_authors!())
+                .version(crate_version!())
+                .subcommand(
+                    SubCommand::with_name("add")
+                        .about("Add a new subproject")
+                        .author(crate_authors!())
+                        .version(crate_version!()),
+                )
+                .subcommand(
+                    SubCommand::with_name("remove")
+                        .about("Remove a given subproject")
+                        .author(crate_authors!())
+                        .version(crate_version!()),
+                )
+                .subcommand(
+                    SubCommand::with_name("edit")
+                        .about("Edit a given subproject")
+                        .author(crate_authors!())
+                        .version(crate_version!()),
+                )
+                .subcommand(
+                    SubCommand::with_name("list")
+                        .about("List all subprojects")
+                        .author(crate_authors!())
+                        .version(crate_version!()),
+                )
+                .subcommand(
+                    SubCommand::with_name("export")
+                        .about("Export a given subproject")
+                        .author(crate_authors!())
+                        .version(crate_version!()),
+                ),
+        )
         .get_matches();
 
     if let Some(matches) = matches.subcommand_matches("init") {
@@ -230,5 +296,38 @@ fn main() {
 
     if let Some(_matches) = matches.subcommand_matches("edit") {
         println!("Subcommand edit is not implemented yet.")
+    }
+
+    if let Some(matches) = matches.subcommand_matches("activities") {
+        if let Some(_matches) = matches.subcommand_matches("add") {
+            println!("Subcommand add is not implemented yet.")
+        }
+        if let Some(_matches) = matches.subcommand_matches("remove") {
+            println!("Subcommand remove is not implemented yet.")
+        }
+        if let Some(_matches) = matches.subcommand_matches("edit") {
+            println!("Subcommand edit is not implemented yet.")
+        }
+        if let Some(_matches) = matches.subcommand_matches("list") {
+            println!("Subcommand list is not implemented yet.")
+        }
+    }
+
+    if let Some(matches) = matches.subcommand_matches("subprojects") {
+        if let Some(_matches) = matches.subcommand_matches("add") {
+            println!("Subcommand add is not implemented yet.")
+        }
+        if let Some(_matches) = matches.subcommand_matches("remove") {
+            println!("Subcommand remove is not implemented yet.")
+        }
+        if let Some(_matches) = matches.subcommand_matches("edit") {
+            println!("Subcommand edit is not implemented yet.")
+        }
+        if let Some(_matches) = matches.subcommand_matches("list") {
+            println!("Subcommand list is not implemented yet.")
+        }
+        if let Some(_matches) = matches.subcommand_matches("export") {
+            println!("Subcommand export is not implemented yet.")
+        }
     }
 }

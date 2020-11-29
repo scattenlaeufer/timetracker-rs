@@ -11,6 +11,41 @@ use unicode_segmentation::UnicodeSegmentation;
 pub const DATETIME_FORMAT: &str = "%Y-%m-%d %H:%M";
 
 #[derive(Serialize, Deserialize, Eq, Debug)]
+struct SubProject {
+    id: usize,
+    name: String,
+    description: String,
+}
+
+impl PartialEq for SubProject {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name && self.description == other.description && self.id == other.id
+    }
+}
+
+impl Ord for SubProject {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.id.cmp(&other.id)
+    }
+}
+
+impl PartialOrd for SubProject {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(&other))
+    }
+}
+
+impl SubProject {
+    fn new(id: usize, name: String, description: String) -> SubProject {
+        SubProject {
+            id,
+            name,
+            description,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Eq, Debug)]
 struct WorkSession {
     start: DateTime<Local>,
     stop: Option<DateTime<Local>>,
@@ -83,6 +118,8 @@ struct TimeSheet {
     project_name: String,
     hourly_rate: Option<f32>,
     work_sessions: Vec<WorkSession>,
+    #[serde(default)]
+    subprojects: Vec<SubProject>,
 }
 
 impl TimeSheet {
@@ -91,6 +128,7 @@ impl TimeSheet {
             project_name,
             hourly_rate,
             work_sessions: Vec::new(),
+            subprojects: Vec::new(),
         }
     }
 
@@ -430,6 +468,23 @@ mod tests {
     */
 
     proptest! {
+        #[test]
+        fn test_subproject_creation(id: usize, name in "\\PC*", description in "\\PC*") {
+            let subproject = SubProject::new(id, name.clone(), description.clone());
+            prop_assert_eq!(subproject.id, id);
+            prop_assert_eq!(subproject.name, name);
+            prop_assert_eq!(subproject.description, description);
+        }
+
+        #[test]
+        fn test_subproject_cmp(id_1: usize, id_2: usize, name_1 in "\\PC*", name_2 in "\\PC*", description_1 in "\\PC*", description_2 in "\\PC*") {
+            let subproject_1 = SubProject::new(id_1, name_1, description_1);
+            let subproject_2 = SubProject::new(id_2, name_2, description_2);
+            prop_assert!((id_1 < id_2) == (subproject_1 < subproject_2));
+            prop_assert!((id_1 > id_2) == (subproject_1 > subproject_2));
+            prop_assert!((id_1 == id_2) == (subproject_1 == subproject_2));
+        }
+
         #[test]
         fn test_time_sheet_creation(project_name in "\\PC*", hourly_rate: f32) {
             let time_sheet = TimeSheet::new(project_name.clone(), Some(hourly_rate));

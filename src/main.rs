@@ -40,6 +40,7 @@ fn main() {
         "Start time of the work session, formatted as \"{}\"",
         timetracker::DATETIME_FORMAT
     );
+
     let start_option = Arg::with_name("start")
         .short("b")
         .long("start")
@@ -207,7 +208,23 @@ fn main() {
                     SubCommand::with_name("add")
                         .about("Add a new subproject")
                         .author(crate_authors!())
-                        .version(crate_version!()),
+                        .version(crate_version!())
+                        .arg(
+                            Arg::with_name("name")
+                                .short("n")
+                                .long("name")
+                                .value_name("NAME")
+                                .required(true)
+                                .help("A name identifier for a new subproject"),
+                        )
+                        .arg(
+                            Arg::with_name("description")
+                                .short("d")
+                                .long("description")
+                                .value_name("DESCRIPTION")
+                                .required(true)
+                                .help("A description for a new subproject"),
+                        ),
                 )
                 .subcommand(
                     SubCommand::with_name("remove")
@@ -314,8 +331,14 @@ fn main() {
     }
 
     if let Some(matches) = matches.subcommand_matches("subprojects") {
-        if let Some(_matches) = matches.subcommand_matches("add") {
-            println!("Subcommand add is not implemented yet.")
+        if let Some(matches) = matches.subcommand_matches("add") {
+            timetracker::add_subproject(
+                matches.value_of("name").expect("No name given!"),
+                matches
+                    .value_of("description")
+                    .expect("no description given!"),
+            )
+            .unwrap();
         }
         if let Some(_matches) = matches.subcommand_matches("remove") {
             println!("Subcommand remove is not implemented yet.")

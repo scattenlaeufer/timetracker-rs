@@ -3,12 +3,47 @@ use prettytable::{cell, format, row, Table};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::fmt;
 use std::io::prelude::*;
 use std::io::{BufReader, BufWriter};
 use std::path::Path;
 use unicode_segmentation::UnicodeSegmentation;
 
 pub const DATETIME_FORMAT: &str = "%Y-%m-%d %H:%M";
+
+/// A enum to represent possible errors within a timetracker
+#[derive(Debug)]
+pub enum TimetrackerError {
+    Subproject(String),
+    Activity(String),
+    IOError(String),
+    SerdeJSON(String),
+}
+
+impl std::error::Error for TimetrackerError {}
+
+impl fmt::Display for TimetrackerError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            TimetrackerError::Subproject(e) => write!(f, "Subproject Error: {}", e),
+            TimetrackerError::Activity(e) => write!(f, "Activity Error: {}", e),
+            TimetrackerError::IOError(e) => write!(f, "IO Error: {}", e),
+            TimetrackerError::SerdeJSON(e) => write!(f, "Serde JSON Error: {}", e),
+        }
+    }
+}
+
+impl From<std::io::Error> for TimetrackerError {
+    fn from(error: std::io::Error) -> Self {
+        TimetrackerError::IOError(error.to_string())
+    }
+}
+
+impl From<serde_json::Error> for TimetrackerError {
+    fn from(error: serde_json::Error) -> Self {
+        TimetrackerError::SerdeJSON(error.to_string())
+    }
+}
 
 #[derive(Serialize, Deserialize, Eq, Debug)]
 struct SubProject {
@@ -136,7 +171,7 @@ impl TimeSheet {
         serde_json::from_str(&json_string)
     }
 
-    fn load(path: &Path) -> Result<TimeSheet, Box<dyn std::error::Error>> {
+    fn load(path: &Path) -> Result<TimeSheet, TimetrackerError> {
         let file = std::fs::File::open(&path)?;
         let reader = BufReader::new(&file);
         let mut lines = vec![];
@@ -144,10 +179,7 @@ impl TimeSheet {
             lines.push(line?);
         }
         let json_string = lines.join("\n");
-        match TimeSheet::from_json(json_string) {
-            Ok(t) => Ok(t),
-            Err(e) => Err(Box::new(e)),
-        }
+        Ok(TimeSheet::from_json(json_string)?)
     }
 }
 
@@ -156,7 +188,7 @@ impl TimeSheet {
         serde_json::to_string(&self)
     }
 
-    fn save(&self, path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    fn save(&self, path: &Path) -> Result<(), TimetrackerError> {
         let file = std::fs::File::create(&path)?;
         let mut writer = BufWriter::new(&file);
         write!(&mut writer, "{}", &self.to_json()?)?;
@@ -450,6 +482,22 @@ pub fn add_work_session_to_time_sheet(
     let mut time_sheet = TimeSheet::load(&time_sheet_path)?;
     time_sheet.work_sessions.push(work_session);
     time_sheet.work_sessions.sort();
+    time_sheet.save(&time_sheet_path)?;
+    Ok(())
+}
+
+pub fn add_subproject(name: &str, description: &str) -> Result<(), TimetrackerError> {
+    //! Add a new subproject to the time sheet
+
+    println!("{} | {}", name, description);
+    let time_sheet_path = Path::new("time_sheet.json");
+    let mut time_sheet = TimeSheet::load(&time_sheet_path)?;
+    let subproject = SubProject::new(
+        time_sheet.subprojects.len(),
+        name.to_string(),
+        description.to_string(),
+    );
+    time_sheet.subprojects.push(subproject);
     time_sheet.save(&time_sheet_path)?;
     Ok(())
 }

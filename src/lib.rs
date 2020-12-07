@@ -17,6 +17,8 @@ pub enum TimetrackerError {
     Activity(String),
     IOError(String),
     SerdeJSON(String),
+    ChronoParse(String),
+    TimeSheet(String),
 }
 
 impl std::error::Error for TimetrackerError {}
@@ -28,6 +30,8 @@ impl fmt::Display for TimetrackerError {
             TimetrackerError::Activity(e) => write!(f, "Activity Error: {}", e),
             TimetrackerError::IOError(e) => write!(f, "IO Error: {}", e),
             TimetrackerError::SerdeJSON(e) => write!(f, "Serde JSON Error: {}", e),
+            TimetrackerError::ChronoParse(e) => write!(f, "Chrono Parse Error: {}", e),
+            TimetrackerError::TimeSheet(e) => write!(f, "TimeSheet Error: {}", e),
         }
     }
 }
@@ -41,6 +45,12 @@ impl From<std::io::Error> for TimetrackerError {
 impl From<serde_json::Error> for TimetrackerError {
     fn from(error: serde_json::Error) -> Self {
         TimetrackerError::SerdeJSON(error.to_string())
+    }
+}
+
+impl From<chrono::ParseError> for TimetrackerError {
+    fn from(error: chrono::ParseError) -> Self {
+        TimetrackerError::ChronoParse(error.to_string())
     }
 }
 
@@ -186,25 +196,6 @@ impl TimeSheet {
     }
 }
 
-#[derive(Debug)]
-struct TimeSheetError {
-    message: String,
-}
-
-impl std::error::Error for TimeSheetError {}
-
-impl std::fmt::Display for TimeSheetError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}", self.message)
-    }
-}
-
-impl TimeSheetError {
-    fn new(message: String) -> TimeSheetError {
-        TimeSheetError { message }
-    }
-}
-
 fn split_description_string(desc_string: &str, max_line_length: usize) -> String {
     let desc_split = desc_string.split(' ');
     let mut lines_vec = vec![];
@@ -226,7 +217,7 @@ pub fn initialize_project(
     name: String,
     hourly_rate: Option<f32>,
     path: &Path,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), TimetrackerError> {
     println!(
         "Initializing Project {} with an hourly rate of {:.02}€",
         name,
@@ -237,7 +228,7 @@ pub fn initialize_project(
     Ok(())
 }
 
-pub fn start_working_session(description: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
+pub fn start_working_session(description: Option<&str>) -> Result<(), TimetrackerError> {
     let start_time = Local::now();
     let mut desc = String::new();
     let path = Path::new("time_sheet.json");
@@ -245,9 +236,9 @@ pub fn start_working_session(description: Option<&str>) -> Result<(), Box<dyn st
     if let Some(s) = time_sheet.work_sessions.last() {
         match s.stop {
             None => {
-                return Err(Box::new(TimeSheetError::new(String::from(
+                return Err(TimetrackerError::TimeSheet(String::from(
                     "Last work session not finished!",
-                ))));
+                )));
             }
             Some(_) => (),
         }
@@ -270,7 +261,7 @@ pub fn start_working_session(description: Option<&str>) -> Result<(), Box<dyn st
     Ok(())
 }
 
-pub fn stop_working_session(description: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
+pub fn stop_working_session(description: Option<&str>) -> Result<(), TimetrackerError> {
     let stop_time = Local::now();
     let mut desc = String::new();
     let path = Path::new("time_sheet.json");
@@ -279,15 +270,15 @@ pub fn stop_working_session(description: Option<&str>) -> Result<(), Box<dyn std
         Some(s) => match s.stop {
             None => (),
             Some(_) => {
-                return Err(Box::new(TimeSheetError::new(String::from(
+                return Err(TimetrackerError::TimeSheet(String::from(
                     "No unfinished work session found to stop!",
-                ))));
+                )));
             }
         },
         None => {
-            return Err(Box::new(TimeSheetError::new(String::from(
+            return Err(TimetrackerError::TimeSheet(String::from(
                 "No unfinished work session found to stop!",
-            ))));
+            )));
         }
     }
     match description {
@@ -313,14 +304,12 @@ pub fn stop_working_session(description: Option<&str>) -> Result<(), Box<dyn std
 }
 
 /// Switch from one working session to the next.
-pub fn switch_working_sessions(
-    description: Option<&str>,
-) -> Result<(), Box<dyn std::error::Error>> {
+pub fn switch_working_sessions(description: Option<&str>) -> Result<(), TimetrackerError> {
     stop_working_session(description)?;
     start_working_session(None)
 }
 
-pub fn analyze_work_sheet(_project: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
+pub fn analyze_work_sheet(_project: Option<&str>) -> Result<(), TimetrackerError> {
     let path = Path::new("time_sheet.json");
     let time_sheet = TimeSheet::load(&path)?;
     let mut work_time: f32 = 0.;
@@ -401,7 +390,7 @@ pub fn add_work_session_to_time_sheet(
     start: &str,
     stop: Option<&str>,
     description: Option<&str>,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), TimetrackerError> {
     let work_session = WorkSession::new(
         Local.datetime_from_str(start, DATETIME_FORMAT)?,
         match stop {

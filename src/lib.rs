@@ -7,6 +7,7 @@ use std::fmt;
 use std::io::prelude::*;
 use std::io::{BufReader, BufWriter};
 use std::path::Path;
+use terminal_size::{terminal_size, Height, Width};
 use unicode_segmentation::UnicodeSegmentation;
 
 pub const DATETIME_FORMAT: &str = "%Y-%m-%d %H:%M";
@@ -367,7 +368,18 @@ pub fn analyze_work_sheet(_project: Option<&str>) -> Result<(), TimetrackerError
     }
 
     for (i, work_session) in time_sheet.work_sessions.iter().enumerate() {
-        let split_description = split_description_string(&work_session.description, 44);
+        let width = match terminal_size() {
+            Some((Width(w), Height(_))) => {
+                if w > 78 {
+                    w
+                } else {
+                    78
+                }
+            }
+            None => 112,
+        };
+        let split_description =
+            split_description_string(&work_session.description, (width - 69).into());
         let stop_time = match work_session.stop {
             Some(s) => s,
             None => Local::now(),

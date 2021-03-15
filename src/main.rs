@@ -79,6 +79,11 @@ fn main() {
         .value_name("DESCRIPTION")
         .help("A description of what you did");
 
+    let homeoffice_option = Arg::with_name("homeoffice")
+        .short("h")
+        .long("homeoffice")
+        .help("Track whether a day was spend in homeoffice or not");
+
     let matches = App::new(crate_name!())
         .version(crate_version!())
         .author(crate_authors!())
@@ -100,6 +105,7 @@ fn main() {
                 .author(crate_authors!())
                 .version(crate_version!())
                 .arg(&project_option)
+                .arg(&homeoffice_option)
                 .arg(&description_argument),
         )
         .subcommand(
@@ -108,6 +114,7 @@ fn main() {
                 .author(crate_authors!())
                 .version(crate_version!())
                 .arg(&project_option)
+                .arg(&homeoffice_option)
                 .arg(&description_argument),
         )
         .subcommand(
@@ -174,11 +181,19 @@ fn main() {
     }
 
     if let Some(matches) = matches.subcommand_matches("start") {
-        timetracker::start_working_session(matches.value_of("description")).unwrap();
+        timetracker::start_working_session(
+            matches.value_of("description"),
+            matches.occurrences_of("homeoffice") > 0,
+        )
+        .unwrap();
     }
 
     if let Some(matches) = matches.subcommand_matches("stop") {
-        timetracker::stop_working_session(matches.value_of("description")).unwrap();
+        timetracker::stop_working_session(
+            matches.value_of("description"),
+            matches.occurrences_of("homeoffice") > 0,
+        )
+        .unwrap();
     }
 
     if let Some(matches) = matches.subcommand_matches("analyze") {
@@ -194,7 +209,11 @@ fn main() {
     }
 
     if let Some(subcommand_matches) = matches.subcommand_matches("switch") {
-        timetracker::switch_working_sessions(subcommand_matches.value_of("description")).unwrap();
+        timetracker::switch_working_sessions(
+            subcommand_matches.value_of("description"),
+            matches.occurrences_of("homeoffice") > 0,
+        )
+        .unwrap();
     }
 
     if let Some(matches) = matches.subcommand_matches("add") {

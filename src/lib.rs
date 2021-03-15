@@ -167,7 +167,10 @@ pub fn initialize_project(
     Ok(())
 }
 
-pub fn start_working_session(description: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
+pub fn start_working_session(
+    description: Option<&str>,
+    homeoffice: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
     let start_time = Local::now();
     let mut desc = String::new();
     let path = Path::new("time_sheet.json");
@@ -200,7 +203,10 @@ pub fn start_working_session(description: Option<&str>) -> Result<(), Box<dyn st
     Ok(())
 }
 
-pub fn stop_working_session(description: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
+pub fn stop_working_session(
+    description: Option<&str>,
+    homeoffice: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
     let stop_time = Local::now();
     let mut desc = String::new();
     let path = Path::new("time_sheet.json");
@@ -245,9 +251,10 @@ pub fn stop_working_session(description: Option<&str>) -> Result<(), Box<dyn std
 /// Switch from one working session to the next.
 pub fn switch_working_sessions(
     description: Option<&str>,
+    homeoffice: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    stop_working_session(description)?;
-    start_working_session(None)
+    stop_working_session(description, homeoffice)?;
+    start_working_session(None, homeoffice)
 }
 
 pub fn analyze_work_sheet(_project: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {

@@ -359,7 +359,7 @@ pub fn analyze_work_sheet(_project: Option<&str>) -> Result<(), TimetrackerError
             "ID",
             "Start",
             "Stop",
-            "HO",
+            "H",
             "Time [h]",
             "Cost [€]",
             "Description"
@@ -379,7 +379,7 @@ pub fn analyze_work_sheet(_project: Option<&str>) -> Result<(), TimetrackerError
             None => 112,
         };
         let split_description =
-            split_description_string(&work_session.description, (width - 69).into());
+            split_description_string(&work_session.description, (width - 72).into());
         let stop_time = match work_session.stop {
             Some(s) => s,
             None => Local::now(),

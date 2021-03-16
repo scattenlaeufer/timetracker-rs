@@ -2,6 +2,7 @@ use chrono::prelude::*;
 use prettytable::{cell, format, row, Table};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
+use std::collections::HashMap;
 use std::io::prelude::*;
 use std::io::{BufReader, BufWriter};
 use std::path::Path;
@@ -289,6 +290,8 @@ pub fn analyze_work_sheet(_project: Option<&str>) -> Result<(), Box<dyn std::err
     let mut table = Table::new();
     table.set_format(*format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
 
+    let mut homeoffice_map: HashMap<String, Vec<Date<Local>>> = HashMap::new();
+
     match time_sheet.hourly_rate {
         Some(_) => table.set_titles(row![
             "ID",
@@ -332,9 +335,38 @@ pub fn analyze_work_sheet(_project: Option<&str>) -> Result<(), Box<dyn std::err
                 ]);
             }
         };
+
+        let work_date = work_session.start.date();
+        let year = format!("{}", work_date.format("%Y"));
+
+        if let None = homeoffice_map.get(&year) {
+            homeoffice_map.insert(year.clone(), Vec::new());
+        }
+
+        let mut homeoffice_vec = homeoffice_map.get(&year).unwrap().clone();
+
+        if !homeoffice_vec.contains(&work_date) && work_session.homeoffice {
+            homeoffice_vec.push(work_date);
+            homeoffice_map.insert(year, homeoffice_vec);
+        }
     }
 
     table.printstd();
+
+    println!();
+
+    let mut homeoffice_table = Table::new();
+    homeoffice_table.set_format(*format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
+    homeoffice_table.set_titles(row!["year", "days in homeoffice"]);
+    let mut year_vec = homeoffice_map.keys().collect::<Vec<&String>>();
+    year_vec.sort();
+    for year in year_vec {
+        homeoffice_table.add_row(row![
+            year,
+            homeoffice_map.get(year).unwrap_or(&Vec::new()).len()
+        ]);
+    }
+    homeoffice_table.printstd();
 
     println!();
 

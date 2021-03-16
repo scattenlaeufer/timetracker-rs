@@ -146,6 +146,7 @@ fn main() {
                 .arg(start_option.clone().required(true))
                 .arg(&stop_option)
                 .arg(&description_option)
+                .arg(&homeoffice_option)
                 .arg(&project_argument),
         )
         .subcommand(
@@ -222,6 +223,7 @@ fn main() {
             matches.value_of("start").unwrap(),
             matches.value_of("stop"),
             matches.value_of("description"),
+            matches.occurrences_of("homeoffice") > 0,
         )
         .unwrap();
     }

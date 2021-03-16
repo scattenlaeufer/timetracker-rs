@@ -14,6 +14,8 @@ struct WorkSession {
     start: DateTime<Local>,
     stop: Option<DateTime<Local>>,
     description: String,
+    #[serde(default)]
+    homeoffice: bool,
 }
 
 impl PartialEq for WorkSession {
@@ -41,18 +43,25 @@ impl WorkSession {
         start: DateTime<Local>,
         stop: Option<DateTime<Local>>,
         description: String,
+        homeoffice: bool,
     ) -> WorkSession {
         WorkSession {
             start,
             stop,
             description,
+            homeoffice,
         }
     }
 
-    fn start_new_work_session(start: DateTime<Local>, description: String) -> WorkSession {
+    fn start_new_work_session(
+        start: DateTime<Local>,
+        description: String,
+        homeoffice: bool,
+    ) -> WorkSession {
         WorkSession {
             start,
             description,
+            homeoffice,
             stop: None,
         }
     }
@@ -198,7 +207,9 @@ pub fn start_working_session(
     };
     time_sheet
         .work_sessions
-        .push(WorkSession::start_new_work_session(start_time, desc));
+        .push(WorkSession::start_new_work_session(
+            start_time, desc, homeoffice,
+        ));
     time_sheet.save(&path)?;
     Ok(())
 }
@@ -242,6 +253,9 @@ pub fn stop_working_session(
     last_work_session.stop = Some(stop_time);
     if description.is_some() {
         last_work_session.description = desc;
+    }
+    if homeoffice {
+        last_work_session.homeoffice = homeoffice;
     }
     time_sheet.work_sessions.push(last_work_session);
     time_sheet.save(&path).unwrap();
@@ -338,6 +352,7 @@ pub fn add_work_session_to_time_sheet(
     start: &str,
     stop: Option<&str>,
     description: Option<&str>,
+    homeoffice: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let work_session = WorkSession::new(
         Local.datetime_from_str(start, DATETIME_FORMAT)?,
@@ -349,6 +364,7 @@ pub fn add_work_session_to_time_sheet(
             Some(d) => String::from(d),
             None => String::from(""),
         },
+        homeoffice,
     );
 
     let time_sheet_path = Path::new("time_sheet.json");

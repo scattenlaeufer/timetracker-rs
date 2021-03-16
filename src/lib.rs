@@ -297,11 +297,12 @@ pub fn analyze_work_sheet(_project: Option<&str>) -> Result<(), Box<dyn std::err
             "ID",
             "Start",
             "Stop",
+            "HO",
             "Time [h]",
             "Cost [€]",
             "Description"
         ]),
-        None => table.set_titles(row!["ID", "Start", "Stop", "Time [h]", "Description"]),
+        None => table.set_titles(row!["ID", "Start", "Stop", "HO", "Time [h]", "Description"]),
     }
 
     for (i, work_session) in time_sheet.work_sessions.iter().enumerate() {
@@ -312,6 +313,12 @@ pub fn analyze_work_sheet(_project: Option<&str>) -> Result<(), Box<dyn std::err
         };
         let duration = (stop_time - work_session.start).num_minutes() as f32 / 60f32;
         work_time += duration;
+        let homeoffice_mark;
+        if work_session.homeoffice {
+            homeoffice_mark = "✔";
+        } else {
+            homeoffice_mark = "";
+        }
         match time_sheet.hourly_rate {
             Some(r) => {
                 let session_cost = duration * r;
@@ -319,6 +326,7 @@ pub fn analyze_work_sheet(_project: Option<&str>) -> Result<(), Box<dyn std::err
                     r->i,
                     work_session.start.format(DATETIME_FORMAT),
                     stop_time.format(DATETIME_FORMAT),
+                    homeoffice_mark,
                     r->format!("{:.02}", duration),
                     r->format!("{:.02}", session_cost),
                     split_description
@@ -330,6 +338,7 @@ pub fn analyze_work_sheet(_project: Option<&str>) -> Result<(), Box<dyn std::err
                     r->i,
                     work_session.start.format(DATETIME_FORMAT),
                     stop_time.format(DATETIME_FORMAT),
+                    homeoffice_mark,
                     r->format!("{:.02}h", duration),
                     split_description
                 ]);

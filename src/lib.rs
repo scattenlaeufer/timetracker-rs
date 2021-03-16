@@ -348,7 +348,7 @@ pub fn analyze_work_sheet(_project: Option<&str>) -> Result<(), Box<dyn std::err
         let work_date = work_session.start.date();
         let year = format!("{}", work_date.format("%Y"));
 
-        if let None = homeoffice_map.get(&year) {
+        if homeoffice_map.get(&year).is_none() {
             homeoffice_map.insert(year.clone(), Vec::new());
         }
 
